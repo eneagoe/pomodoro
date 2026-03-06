@@ -27,6 +27,7 @@ struct KeyRecorderButton: View {
 
     private func startRecording() {
         isRecording = true
+        HotkeyManager.shared.unregisterAll()   // prevent Carbon from eating the key combo
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == UInt16(kVK_Escape) {
                 stopRecording()
@@ -35,8 +36,7 @@ struct KeyRecorderButton: View {
             let mods = carbonModifiers(from: event.modifierFlags)
             guard mods != 0 else { return event }  // require at least one modifier
             config = HotkeyConfig(keyCode: Int(event.keyCode), modifiers: mods)
-            stopRecording()
-            HotkeyManager.shared.reregisterAll()
+            stopRecording()   // reregisterAll() is called inside stopRecording
             return nil
         }
     }
@@ -47,6 +47,7 @@ struct KeyRecorderButton: View {
             NSEvent.removeMonitor(m)
             monitor = nil
         }
+        HotkeyManager.shared.reregisterAll()   // restore hotkeys (with updated config)
     }
 
     private func carbonModifiers(from flags: NSEvent.ModifierFlags) -> Int {

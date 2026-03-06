@@ -3,6 +3,7 @@ import SwiftUI
 struct TimerView: View {
     @EnvironmentObject var timer: PomodoroTimer
     @State private var todayCount: Int = 0
+    @FocusState private var noteFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 16) {
@@ -32,8 +33,14 @@ struct TimerView: View {
                 TextField("What are you working on?", text: $timer.currentNote)
                     .textFieldStyle(.roundedBorder)
                     .font(.callout)
+                    .focused($noteFieldFocused)
                     .disabled(timer.state == .running)
                     .opacity(timer.state == .running ? 0.6 : 1)
+                    .onSubmit {
+                        if timer.state == .idle || timer.state == .finished {
+                            timer.start()
+                        }
+                    }
             }
 
             // Pomodoro dots
@@ -79,6 +86,12 @@ struct TimerView: View {
         .onAppear { refreshTodayCount() }
         .onReceive(timer.$state) { newState in
             if newState == .idle { refreshTodayCount() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pomodoroFocusNote)) { _ in
+            // Brief delay so the popover finishes appearing before focus is set
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                noteFieldFocused = true
+            }
         }
     }
 

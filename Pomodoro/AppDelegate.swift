@@ -14,6 +14,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationManager.shared.requestPermission()
         HotkeyManager.shared.setup()
 
+        NotificationCenter.default.addObserver(
+            forName: .pomodoroFocusNote, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.showPopover()
+        }
+
         tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.updateStatusItemTitle()
         }

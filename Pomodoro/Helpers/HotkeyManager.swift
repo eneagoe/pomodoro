@@ -102,10 +102,22 @@ final class HotkeyManager {
         )
     }
 
+    func unregisterAll() {
+        for (_, ref) in registeredRefs { UnregisterEventHotKey(ref) }
+        registeredRefs = [:]
+    }
+
     fileprivate func handleHotkey(id: UInt32) {
         let t = PomodoroTimer.shared
         switch id {
-        case 1: if t.state == .idle || t.state == .finished { t.start() }
+        case 1:
+            guard t.state == .idle || t.state == .finished else { return }
+            if t.currentSession == .work {
+                // Open popover and focus note field; user confirms with Enter
+                NotificationCenter.default.post(name: .pomodoroFocusNote, object: nil)
+            } else {
+                t.start()
+            }
         case 2: if t.state == .running { t.pause() }
         case 3: if t.state == .paused  { t.start() }
         default: break
@@ -114,6 +126,10 @@ final class HotkeyManager {
 }
 
 // MARK: - C callback (must be top-level, non-capturing)
+
+extension Notification.Name {
+    static let pomodoroFocusNote = Notification.Name("pomodoroFocusNote")
+}
 
 private let pomFourCC: FourCharCode = {
     "POMR".unicodeScalars.reduce(0) { ($0 << 8) + FourCharCode($1.value) }
