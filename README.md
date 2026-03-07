@@ -73,8 +73,12 @@ Output: `~/Desktop/MacPomodoroExport/MacPomodoro.app`
 - `Pomodoro/Persistence` - DB + CSV export
 - `build.sh` - archive/export script
 
+
+## Optional auto-start at login
+
+` osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/MacPomodoro.app", hidden:false}'`
+
 ## Roadmap
-- Optional auto-start at login
 - Custom sounds
 
 ## License
