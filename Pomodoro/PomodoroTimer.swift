@@ -81,12 +81,18 @@ final class PomodoroTimer: ObservableObject {
         state = .finished
         logSession(completed: true)
 
-        if currentSession == .work {
+        let completedSession = currentSession
+        if completedSession == .work {
             pomodoroCount += 1
         }
 
-        NotificationManager.shared.sendSessionEndNotification(for: currentSession)
+        NotificationManager.shared.sendSessionEndNotification(for: completedSession)
         advance()
+
+        // Auto-start break after a completed work session
+        if completedSession == .work {
+            start()
+        }
     }
 
     private func advance() {
