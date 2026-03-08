@@ -15,7 +15,9 @@ struct StatsView: View {
                 // Daily
                 GroupBox {
                     HStack(spacing: 0) {
-                        StatItem(label: "Pomodoros", value: "\(todayCompleted)")
+                        StatItem(label: "Completed", value: "\(todayCompleted)")
+                        Divider().frame(height: 36)
+                        StatItem(label: "Cancelled", value: "\(todayCancelled)")
                         Divider().frame(height: 36)
                         StatItem(label: "Focus time", value: "\(todayMinutes) min")
                     }
@@ -33,12 +35,19 @@ struct StatsView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .frame(height: 80)
                     } else {
-                        Chart(data) { item in
-                            BarMark(
-                                x: .value("Day", item.date, unit: .day),
-                                y: .value("Pomodoros", item.completedPomodoros)
-                            )
-                            .foregroundStyle(.red)
+                        Chart {
+                            ForEach(data) { item in
+                                BarMark(
+                                    x: .value("Day", item.date, unit: .day),
+                                    y: .value("Pomodoros", item.completedPomodoros)
+                                )
+                                .foregroundStyle(.red)
+                                BarMark(
+                                    x: .value("Day", item.date, unit: .day),
+                                    y: .value("Pomodoros", item.cancelledPomodoros)
+                                )
+                                .foregroundStyle(.gray.opacity(0.4))
+                            }
                         }
                         .chartXAxis {
                             AxisMarks(values: .stride(by: .day)) {
@@ -58,7 +67,9 @@ struct StatsView: View {
                 GroupBox {
                     VStack(spacing: 8) {
                         HStack(spacing: 0) {
-                            StatItem(label: "Total", value: "\(allCompleted)")
+                            StatItem(label: "Completed", value: "\(allCompleted)")
+                            Divider().frame(height: 36)
+                            StatItem(label: "Cancelled", value: "\(allCancelled)")
                             Divider().frame(height: 36)
                             StatItem(label: "Hours", value: String(format: "%.1f", Double(allFocusSeconds) / 3600))
                         }
@@ -103,6 +114,10 @@ struct StatsView: View {
         todaySessions.filter { $0.sessionType == SessionType.work.rawValue && $0.completed }.count
     }
 
+    private var todayCancelled: Int {
+        todaySessions.filter { $0.sessionType == SessionType.work.rawValue && !$0.completed }.count
+    }
+
     private var todayMinutes: Int {
         todaySessions
             .filter { $0.sessionType == SessionType.work.rawValue && $0.completed }
@@ -111,6 +126,10 @@ struct StatsView: View {
 
     private var allCompleted: Int {
         allSessions.filter { $0.sessionType == SessionType.work.rawValue && $0.completed }.count
+    }
+
+    private var allCancelled: Int {
+        allSessions.filter { $0.sessionType == SessionType.work.rawValue && !$0.completed }.count
     }
 
     private var allFocusSeconds: Int {

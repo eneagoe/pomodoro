@@ -15,8 +15,13 @@ final class PomodoroTimer: ObservableObject {
     @Published var currentNote: String = ""
 
     private var countdownTimer: Timer?
+    private var interruptionTimer: Timer?
     private var sessionStartTime: Date?
+    private var interruptionCount: Int = 0
     private var prefs: Preferences { .shared }
+
+    private static let maxInterruptionSeconds: TimeInterval = 45
+    private static let maxInterruptions: Int = 2
 
     private init() {
         remainingSeconds = prefs.workDuration * 60
@@ -37,7 +42,10 @@ final class PomodoroTimer: ObservableObject {
         guard state != .running else { return }
         if state == .idle || state == .finished {
             sessionStartTime = Date()
+            interruptionCount = 0
         }
+        interruptionTimer?.invalidate()
+        interruptionTimer = nil
         state = .running
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.tick()
@@ -46,15 +54,35 @@ final class PomodoroTimer: ObservableObject {
 
     func pause() {
         guard state == .running else { return }
+        interruptionCount += 1
+        if interruptionCount > Self.maxInterruptions {
+            cancelSession()
+            return
+        }
         state = .paused
         invalidateTimer()
+        interruptionTimer = Timer.scheduledTimer(withTimeInterval: Self.maxInterruptionSeconds, repeats: false) { [weak self] _ in
+            self?.cancelDueToLongInterruption()
+        }
     }
 
     func reset() {
+        cancelSession()
+    }
+
+    private func cancelDueToLongInterruption() {
+        guard state == .paused else { return }
+        cancelSession()
+    }
+
+    private func cancelSession() {
         if state == .running || state == .paused {
             logSession(completed: false)
         }
         invalidateTimer()
+        interruptionTimer?.invalidate()
+        interruptionTimer = nil
+        interruptionCount = 0
         state = .idle
         sessionStartTime = nil
         remainingSeconds = totalSecondsForCurrentSession
@@ -65,6 +93,9 @@ final class PomodoroTimer: ObservableObject {
             logSession(completed: false)
         }
         invalidateTimer()
+        interruptionTimer?.invalidate()
+        interruptionTimer = nil
+        interruptionCount = 0
         advance()
     }
 

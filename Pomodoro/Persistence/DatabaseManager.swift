@@ -100,18 +100,22 @@ final class DatabaseManager {
         let id: Date
         var date: Date { id }
         let completedPomodoros: Int
+        let cancelledPomodoros: Int
         let totalFocusMinutes: Int
     }
 
     func dailyStats(for sessions: [PomodoroSession]) -> [DailyStats] {
         let cal = Calendar.current
-        let workSessions = sessions.filter { $0.sessionType == SessionType.work.rawValue && $0.completed }
+        let workSessions = sessions.filter { $0.sessionType == SessionType.work.rawValue }
         let grouped = Dictionary(grouping: workSessions) { cal.startOfDay(for: $0.startedAt) }
         return grouped.map { date, items in
-            DailyStats(
+            let completed = items.filter { $0.completed }
+            let cancelled = items.filter { !$0.completed }
+            return DailyStats(
                 id: date,
-                completedPomodoros: items.count,
-                totalFocusMinutes: items.reduce(0) { $0 + $1.durationSeconds } / 60
+                completedPomodoros: completed.count,
+                cancelledPomodoros: cancelled.count,
+                totalFocusMinutes: completed.reduce(0) { $0 + $1.durationSeconds } / 60
             )
         }.sorted { $0.date < $1.date }
     }
