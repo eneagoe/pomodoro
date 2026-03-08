@@ -1,11 +1,12 @@
 import AppKit
 import SwiftUI
+import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
-    private var tickTimer: Timer?
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -20,9 +21,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.showPopover()
         }
 
-        tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateStatusItemTitle()
-        }
+        let t = PomodoroTimer.shared
+        t.$remainingSeconds.combineLatest(t.$state)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.updateStatusItemTitle() }
+            .store(in: &cancellables)
     }
 
     private func setupStatusItem() {
@@ -40,10 +43,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 300, height: 420)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
-            rootView: PopoverView()
-                .environmentObject(PomodoroTimer.shared)
-        )
     }
 
     private func setupEventMonitor() {
@@ -64,12 +63,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showPopover() {
         guard let button = statusItem.button else { return }
+        popover.contentViewController = NSHostingController(
+            rootView: PopoverView().environmentObject(PomodoroTimer.shared)
+        )
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         eventMonitor?.start()
     }
 
     private func closePopover() {
         popover.performClose(nil)
+        popover.contentViewController = nil
         eventMonitor?.stop()
     }
 
