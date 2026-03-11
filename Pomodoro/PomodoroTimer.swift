@@ -18,10 +18,12 @@ final class PomodoroTimer: ObservableObject {
     private var interruptionTimer: Timer?
     private var sessionStartTime: Date?
     private var interruptionCount: Int = 0
+    private var completedPomodoroDates: [Date] = []
     private var prefs: Preferences { .shared }
 
     private static let maxInterruptionSeconds: TimeInterval = 45
     private static let maxInterruptions: Int = 2
+    private static let pomodoroSessionWindow: TimeInterval = 2.5 * 3600
 
     private init() {
         remainingSeconds = prefs.workDuration * 60
@@ -114,7 +116,7 @@ final class PomodoroTimer: ObservableObject {
 
         let completedSession = currentSession
         if completedSession == .work {
-            pomodoroCount += 1
+            completedPomodoroDates.append(Date())
         }
 
         NotificationManager.shared.sendSessionEndNotification(for: completedSession)
@@ -126,7 +128,14 @@ final class PomodoroTimer: ObservableObject {
         }
     }
 
+    private func recomputePomodoroCount() {
+        let cutoff = Date().addingTimeInterval(-Self.pomodoroSessionWindow)
+        completedPomodoroDates = completedPomodoroDates.filter { $0 > cutoff }
+        pomodoroCount = completedPomodoroDates.count
+    }
+
     private func advance() {
+        recomputePomodoroCount()
         let next = nextSessionType()
         currentSession = next
         remainingSeconds = durationFor(session: next)
