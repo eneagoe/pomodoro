@@ -23,7 +23,15 @@ final class PomodoroTimer: ObservableObject {
 
     private static let maxInterruptionSeconds: TimeInterval = 45
     private static let maxInterruptions: Int = 2
-    private static let pomodoroSessionWindow: TimeInterval = 2.5 * 3600
+    private static let pomodoroSessionWindowBuffer: TimeInterval = 30 * 60
+
+    /// Time to complete a full cycle back-to-back, plus a 30-minute buffer.
+    private var pomodoroSessionWindow: TimeInterval {
+        let n = prefs.pomodorosBeforeLongBreak
+        let work = n * prefs.workDuration * 60
+        let breaks = (n - 1) * prefs.shortBreakDuration * 60
+        return TimeInterval(work + breaks) + Self.pomodoroSessionWindowBuffer
+    }
 
     private init() {
         remainingSeconds = prefs.workDuration * 60
@@ -129,7 +137,7 @@ final class PomodoroTimer: ObservableObject {
     }
 
     private func recomputePomodoroCount() {
-        let cutoff = Date().addingTimeInterval(-Self.pomodoroSessionWindow)
+        let cutoff = Date().addingTimeInterval(-pomodoroSessionWindow)
         completedPomodoroDates = completedPomodoroDates.filter { $0 > cutoff }
         pomodoroCount = completedPomodoroDates.count
     }
